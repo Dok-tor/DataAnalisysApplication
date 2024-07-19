@@ -1,0 +1,13 @@
+/.venv/
+/.venv2/
+/.venv3/
+/.venv_clean/
+/__pycache__/
+/.idea/
+my.ui
+test_ellippse.py
+TheFirstGui.zip
+requirements.txt
+state.png
+/Data/my_data3.data
+
