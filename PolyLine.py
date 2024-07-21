@@ -35,14 +35,20 @@ class Line:
             glVertex(point[0], point[1])
         glEnd()
 
+    def move(self, x, y):
+        if self.finished:
+            self.points[:, 0] += x
+            self.points[:, 1] += y
+
     def makePolygon(self):
-        polygon_points = np.array(self.points)
+        # polygon_points = np.array(self.points)
+        self.points = np.array(self.points)
         # Если полигон это точка или линия (защита от ощибок в вычислениях)
-        if polygon_points.shape[0] < 3:
+        if self.points.shape[0] < 3:
             return False
 
         # Создание полигона из точек
-        polygon = Polygon(polygon_points)
+        polygon = Polygon(self.points)
 
         # Создание точки
 
@@ -54,7 +60,7 @@ class Line:
 
         self.polygon = polygon
 
-    def isPointInsidePolygon(self, point):
+    def isPointInside(self, point):
         x, y = point
 
         p = Point(x, y)

@@ -27,14 +27,6 @@ class ReadOnlyDelegate(QStyledItemDelegate):
         return None
 
 
-class SilentMessageBox(QMessageBox):
-    def event(self, e):
-        if e.type() == QEvent.Show:
-            # Переопределяем метод event для подавления звука
-            self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowSound)
-        return super(SilentMessageBox, self).event(e)
-
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -465,10 +457,9 @@ class MainWindow(QMainWindow):
                 return False
 
         self.file_name = file_name_labels
-        box = SilentMessageBox()
-        box.information(self, "Success",
-                        f"{file_base_name_clean}.data and {file_base_name_clean}.stat saved successfully!",
-                        QMessageBox.Ok)
+        QMessageBox.information(self, "Success",
+                                f"{file_base_name_clean}.data and {file_base_name_clean}.stat saved successfully!",
+                                QMessageBox.Ok)
 
         # Смена название окна на текущий сохранённый файл
         self.setWindowTitle(f"Data_analysis - {file_name_labels}")

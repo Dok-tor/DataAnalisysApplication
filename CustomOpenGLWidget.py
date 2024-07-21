@@ -64,6 +64,7 @@ class VisualizeDataWidget(QOpenGLWidget):
         self.ellipse = None
         self.line = None
         self.splineType = SplineType.ELLIPSE
+        self.is_drawing_moving_now = False
 
     def setMode(self, mode):
         self.mode = mode
@@ -93,6 +94,7 @@ class VisualizeDataWidget(QOpenGLWidget):
         self.ellipse = None
         self.line = None
         self.splineType = SplineType.ELLIPSE
+        self.is_drawing_moving_now = False
 
     def setSize(self, size) -> None:
         self.size = size
@@ -210,9 +212,21 @@ class VisualizeDataWidget(QOpenGLWidget):
                 if self.splineType == SplineType.ELLIPSE:
                     # Начинаем рисовать эллипс
                     self.ellipse = Ellipse((ogl_x, ogl_y), 1)
+
                 elif self.splineType == SplineType.POLYLINE:
                     # Начинаем рисовать линию
                     self.line = Line((ogl_x, ogl_y))
+            elif event.button() == Qt.RightButton:
+                pos = event.pos()
+                ogl_x, ogl_y = self.getCurrentCoords(pos)
+                # Начинаем рисовать эллипс
+                self.last_mouse_position = event.pos()
+                if self.splineType == SplineType.ELLIPSE and self.ellipse:
+                    if self.ellipse.isPointInside(ogl_x, ogl_y):
+                        self.is_drawing_moving_now = True
+                elif self.splineType == SplineType.POLYLINE and self.line:
+                    if self.line.isPointInside((ogl_x, ogl_y)):
+                        self.is_drawing_moving_now = True
 
     def mouseMoveEvent(self, event):
         if self.mode == State.MANIPULATE:
@@ -242,12 +256,31 @@ class VisualizeDataWidget(QOpenGLWidget):
 
                 if self.splineType == SplineType.ELLIPSE:
                     if self.ellipse:
+                        # if
                         self.ellipse.updateEndPoint((ogl_x, ogl_y), self.scale)
 
                 elif self.splineType == SplineType.POLYLINE:
                     if self.line:
                         self.line.addPoint((ogl_x, ogl_y))
 
+                self.update()
+
+            if event.buttons() & Qt.RightButton:
+                pos = event.pos()
+
+                ogl_x, ogl_y = self.getCurrentCoords(pos)
+                old_ogl_x, old_ogl_y = self.getCurrentCoords(self.last_mouse_position)
+                dx = ogl_x - old_ogl_x
+                dy = ogl_y - old_ogl_y
+                if self.splineType == SplineType.ELLIPSE and self.ellipse:
+                    if self.is_drawing_moving_now:
+                        # print(ogl_x, ogl_y, self.ellipse.center_x, self.ellipse.center_y)
+                        self.ellipse.move(dx, dy)
+
+                elif self.splineType == SplineType.POLYLINE and self.line:
+                    if self.is_drawing_moving_now:
+                        self.line.move(dx, dy)
+                self.last_mouse_position = pos
                 self.update()
 
     def getCurrentCoords(self, pos):
@@ -271,6 +304,8 @@ class VisualizeDataWidget(QOpenGLWidget):
             self.ellipse.finish()
         if self.line:
             self.line.finish()
+        if self.is_drawing_moving_now:
+            self.is_drawing_moving_now = False
 
     def wheelEvent(self, event: QWheelEvent):
         if self.mode == State.MOVE or self.mode == State.MANIPULATE:
@@ -339,44 +374,24 @@ class VisualizeDataWidget(QOpenGLWidget):
             scaled_points = rotated_points[:, :2] * self.scale
 
             for i, scaled_point in enumerate(scaled_points):
-                if self.line.isPointInsidePolygon(scaled_point[:2]):
+                if self.line.isPointInside(scaled_point[:2]):
                     highlighted_points.append(i)
 
-            ttt = 0
             return highlighted_points
 
     def highlightPointsInEllipse(self):
         if self.ellipse:
             highlighted_points = []
 
-            normalized_data = self.tour.getNormalizedData()
             rotation_matrix = self.rotation.as_matrix()
-            ellipse_angle_rad = -np.radians(self.ellipse.angle)  # Угол поворота эллипса в радианах
 
-            # Матрица поворота для преобразования точек в систему координат эллипса
-            cos_angle = np.cos(ellipse_angle_rad)
-            sin_angle = np.sin(ellipse_angle_rad)
-            ellipse_rotation_matrix = np.array([
-                [cos_angle, -sin_angle],
-                [sin_angle, cos_angle]
-            ])
-
-            rotated_points = np.dot(rotation_matrix, normalized_data.T).T
+            rotated_points = np.dot(rotation_matrix, self.tour.getNormalizedData().T).T
             scaled_points = rotated_points[:, :2] * self.scale
 
             for i, scaled_point in enumerate(scaled_points):
-                # rotated_point = np.dot(rotation_matrix, point)
-                # scaled_x = rotated_point[0] * self.scale
-                # scaled_y = rotated_point[1] * self.scale
+
                 scaled_x, scaled_y = scaled_point[:2]
-
-                # Перемещение точки в систему координат эллипса
-                translated_point = np.array([scaled_x - self.ellipse.center_x, scaled_y - self.ellipse.center_y])
-                transformed_point = np.dot(ellipse_rotation_matrix, translated_point)
-
-                # Проверка принадлежности точки эллипсу с учетом масштаба и поворота
-                if (transformed_point[0] / (self.ellipse.width / 2)) ** 2 + (
-                        transformed_point[1] / (self.ellipse.height / 2)) ** 2 <= 1:
+                if self.ellipse.isPointInside(scaled_x, scaled_y):
                     highlighted_points.append(i)
 
             return highlighted_points

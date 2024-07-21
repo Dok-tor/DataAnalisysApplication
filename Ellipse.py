@@ -12,6 +12,7 @@ class Ellipse:
         self.center_y = None
         self.finished = False
         self.angle = 0  # Добавленный атрибут для угла поворота
+        self.ellipse_rotation_matrix = None
 
     def updateEndPoint(self, end_point, scale):
         dx = (end_point[0] - self.start_point[0]) * self.sensitivity
@@ -24,6 +25,17 @@ class Ellipse:
         self.height = abs(self.end_point[1] - self.start_point[1])
         self.center_x = (self.start_point[0] + self.end_point[0]) / 2
         self.center_y = (self.start_point[1] + self.end_point[1]) / 2
+
+    def calculateAngle(self):
+        ellipse_angle_rad = -np.radians(self.angle)
+
+        # Матрица поворота для преобразования точек в систему координат эллипса
+        cos_angle = np.cos(ellipse_angle_rad)
+        sin_angle = np.sin(ellipse_angle_rad)
+        self.ellipse_rotation_matrix = np.array([
+            [cos_angle, -sin_angle],
+            [sin_angle, cos_angle]
+        ])
 
     def increaseHeight(self):
         # self.height += 0.02
@@ -52,10 +64,38 @@ class Ellipse:
         self.center_x += 0.01
 
     def finish(self):
+        if self.finished:
+            return
         self.finished = True
+        self.calculateParams()
+        self.calculateAngle()
 
     def rotate(self, angle_delta):
         self.angle -= angle_delta
+        self.calculateAngle()
+
+    def move(self, x, y):
+        if self.finished:
+            self.center_x += x
+            self.center_y += y
+
+    def isPointInside(self, x, y):
+        # ellipse_angle_rad = -np.radians(self.angle)
+        # cos_angle = np.cos(ellipse_angle_rad)
+        # sin_angle = np.sin(ellipse_angle_rad)
+        #
+        # # Матрица поворота для преобразования точек в систему координат эллипса
+        # cos_angle = np.cos(ellipse_angle_rad)
+        # sin_angle = np.sin(ellipse_angle_rad)
+        # ellipse_rotation_matrix = np.array([
+        #     [cos_angle, -sin_angle],
+        #     [sin_angle, cos_angle]
+        # ])
+
+        translated_point = np.array([x - self.center_x, y - self.center_y])
+        transformed_point = np.dot(self.ellipse_rotation_matrix, translated_point)
+
+        return (transformed_point[0] / (self.width / 2)) ** 2 + (transformed_point[1] / (self.height / 2)) ** 2 <= 1
 
     def draw(self):
         glColor3f(0.0, 1.0, 1.0)
