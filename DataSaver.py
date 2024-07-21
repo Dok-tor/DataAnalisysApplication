@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def matrixToString(matrix: np.ndarray) -> str:
+def matrixToString(matrix: np.ndarray, labels_dict: dict = None) -> str:
     if not len(matrix):
         return ""
 
@@ -15,17 +15,25 @@ def matrixToString(matrix: np.ndarray) -> str:
     for i in range(n):
         string += '\t'
         for j in range(m):
-            string += str(matrix[i][j])
-            if not j == m - 1:
-                string += '\t'
+            if j == m - 1:
+                if labels_dict:
+                    # Подразумевается, что если словарь есть, значит последнее число в строке это метка класса
+                    # Значит сделаем её целочисленной
+                    string += str(int(matrix[i][j]))
+            else:
+                string += str(matrix[i][j])
+                string += '\t\t'
+        if labels_dict:
+            string += f"\t\"{labels_dict[matrix[i][-1]]}\""
         string += "\n"
     return string
 
 
 class DataSaver:
-    def __init__(self, points: np.ndarray, labels: np.ndarray) -> None:
+    def __init__(self, points: np.ndarray, labels: np.ndarray, labels_dict: dict = None) -> None:
         self.points = points
         self.labels = labels
+        self.labels_dict = labels_dict
 
     def saveStatistics(self, path_to_stat_file: str) -> bool:
         with open(path_to_stat_file, 'w') as f:
@@ -35,21 +43,22 @@ class DataSaver:
             dim = len(self.points[0])
             n = len(self.points)
             f.write(f'points: {n}\tdim: {dim}\n')
+            f.write('\n')
 
             cluster_labels, cluster_means, cluster_covariances, cluster_correlations = self.calculateStatistics()
 
             for i, label in enumerate(cluster_labels):
-                f.write(f"For Cluster {label}\n")
+                f.write(f"For Cluster number: {label}, name: {self.labels_dict.get(label, "")}\n")
                 f.write('\n')
 
                 f.write(matrixToString(cluster_means[i]))
                 f.write('\n')
 
-                f.write("Covariance matrix\n")
+                f.write("\tCovariance matrix\n")
                 f.write(matrixToString(cluster_covariances[i]))
                 f.write('\n')
 
-                f.write("Correlation matrix\n")
+                f.write("\tCorrelation matrix\n")
                 f.write(matrixToString(cluster_correlations[i]))
                 f.write('\n')
         return True
@@ -62,11 +71,11 @@ class DataSaver:
         n = len(self.points)
 
         with open(path_to_label_file, 'w') as f:
-            f.write(f'{n} {dim}\n')
+            f.write(f'{n} {dim} {len(np.unique(self.labels))}\n')
 
             labels_reshaped = self.labels[:, np.newaxis]
             points_and_labels = np.hstack((self.points, labels_reshaped))
-            f.write(f'{matrixToString(np.round(points_and_labels, 6))}\n')
+            f.write(f'{matrixToString(np.round(points_and_labels, 6), self.labels_dict)}\n')
         return True
 
     def calculateStatistics(self):

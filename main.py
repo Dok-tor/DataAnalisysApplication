@@ -2,11 +2,11 @@ import os
 import sys
 
 import numpy as np
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import Qt, QUrl, QEvent
+from PyQt5.QtGui import QIcon, QDesktopServices
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QFileDialog, QPushButton, \
     QHBoxLayout, QTabWidget, QAction, QSpinBox, QBoxLayout, QFrame, QGridLayout, QTableWidget, \
-    QMenu, QTableWidgetItem, QMessageBox, QRadioButton
+    QMenu, QTableWidgetItem, QMessageBox, QRadioButton, QStyledItemDelegate
 
 from CustomOpenGLWidget import VisualizeDataWidget, State
 from DataLoader import DataLoader
@@ -17,6 +17,22 @@ from Tour import Tour
 # не влияет
 QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)  # enable highdpi scaling
 QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)  # use highdpi icons
+
+
+class ReadOnlyDelegate(QStyledItemDelegate):
+    """Класс-делегат, который запрещает редактирование. Используется для запрещения редактирования столбцов таблицы
+     Clusters"""
+
+    def createEditor(self, parent, option, index):
+        return None
+
+
+class SilentMessageBox(QMessageBox):
+    def event(self, e):
+        if e.type() == QEvent.Show:
+            # Переопределяем метод event для подавления звука
+            self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowSound)
+        return super(SilentMessageBox, self).event(e)
 
 
 class MainWindow(QMainWindow):
@@ -34,10 +50,12 @@ class MainWindow(QMainWindow):
         # Добавляем пункты меню
         self.openAction = QAction('Open Data')
         self.saveAction = QAction('Save Data')
+        self.openDir = QAction('Open Directory')
         self.closeAction = QAction('Close Data')
 
         self.fileMenu.addAction(self.openAction)
         self.fileMenu.addAction(self.saveAction)
+        self.fileMenu.addAction(self.openDir)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.closeAction)
 
@@ -206,6 +224,11 @@ class MainWindow(QMainWindow):
         self.cluster_table.setColumnWidth(1, 80)
         self.cluster_table.setColumnWidth(2, 100)
 
+        # Установка делегатов для столбцов "Cluster №" и "Points"
+        readonly_delegate = ReadOnlyDelegate()
+        self.cluster_table.setItemDelegateForColumn(0, readonly_delegate)
+        self.cluster_table.setItemDelegateForColumn(2, readonly_delegate)
+
         # Добавляем расположение на 2 вкладку и размещаем её на вкладочном виджете
 
         self.tab2Layout.addWidget(self.cluster_table)
@@ -227,6 +250,9 @@ class MainWindow(QMainWindow):
         # Закрытие файла
         self.closeAction.triggered.connect(self.closeFile)
 
+        # Открытие директории с файлом
+        self.openDir.triggered.connect(self.showCurrentDirectoryInFileManager)
+
         # Сохранение файла
         self.saveAction.triggered.connect(self.savePointsAndStatistics)
         self.saveButton.clicked.connect(self.savePointsAndStatistics)
@@ -242,7 +268,6 @@ class MainWindow(QMainWindow):
 
         # Добавление кластера
         self.add_cluster_button.clicked.connect(self.addCluster)
-        self.tour = None
 
         # Сброс нарисованных фигур
         self.reset_drawing_button.clicked.connect(self.resetDrawing)
@@ -262,6 +287,7 @@ class MainWindow(QMainWindow):
         self.turn_ellipse_left.clicked.connect(self.turnEllipseLeft)
 
         self.cluster_table.customContextMenuRequested.connect(self.showContextMenu)
+        self.cluster_table.itemChanged.connect(self.onClusterNameChanged)
 
         # Так как начальное состояние move деактивируем кнопки связанные с выделением кластеров
         self.add_cluster_button.setEnabled(False)
@@ -277,6 +303,9 @@ class MainWindow(QMainWindow):
         self.turn_ellipse_left.setEnabled(False)
         self.ellipse_radio_button.setEnabled(False)
         self.line_radio_button.setEnabled(False)
+
+        self.tour = None
+        self.file_name = None
 
     def on_resize(self, event):
         """Устанавливаем новые размеры и шрифты для виджетов в зависимости от размера окна
@@ -313,12 +342,14 @@ class MainWindow(QMainWindow):
             data_loader = DataLoader(file_name)
             data_loader.loadData()
 
-            self.tour = Tour(data_loader.dim, data_loader.data, data_loader.labels)
+            self.tour = Tour(data_loader.getDim(), data_loader.getData(), data_loader.getLabels(),
+                             data_loader.getLabelsDict())
             self.opengl_widget.setTour(self.tour)
             self.opengl_widget.setSize(2)  # Магическое число, отвечает за размер отрисовки точек в opengl_widget
 
             # Смена заголовка программы
             self.setWindowTitle(f"Data_analysis - {file_name}")
+            self.file_name = file_name
 
             # Смена значения отображаемой размерности
             self.spin_box_dim.setValue(data_loader.dim)
@@ -337,42 +368,39 @@ class MainWindow(QMainWindow):
                     continue
 
                 count = np.sum(self.tour.labels == label)
-                self.insertNewRowToClusterTable(label, count)
+                label_name = self.tour.getLabelsDict().get(label, None)
+                self.insertNewRowToClusterTable(label, count, label_name=label_name)
+
+    def onClusterNameChanged(self, item):
+        if item.column() == 1:
+            row = item.row()
+            cluster_number = int(self.cluster_table.item(row, 0).text())
+            self.tour.addClusterLabel(cluster_number, item.text())
+            # print(item.text())
 
     def disableEllipseButtons(self):
-        """Деактивирует кнопки управления эллипсом (для режима манипулирования точками)"""
+        """Деактивирует кнопки управления рисованием (для режима манипулирования точками)"""
         self.draw_or_move_button.setText("Draw Ellipse")
 
         self.add_cluster_button.setEnabled(False)
         self.reset_drawing_button.setEnabled(False)
         self.spin_box_cluster_number.setEnabled(False)
-        self.decrease_ellipse_height.setEnabled(False)
-        self.increase_ellipse_height.setEnabled(False)
-        self.increase_ellipse_wight.setEnabled(False)
-        self.decrease_ellipse_wight.setEnabled(False)
-        self.turn_ellipse_up.setEnabled(False)
-        self.turn_ellipse_down.setEnabled(False)
-        self.turn_ellipse_right.setEnabled(False)
-        self.turn_ellipse_left.setEnabled(False)
+        # Выключает только кнопки взаимодействия с эллипсом
+        self.disableEllipseManipulateButtons()
+
         self.ellipse_radio_button.setEnabled(False)
         self.line_radio_button.setEnabled(False)
         self.ellipse_radio_button.setChecked(False)
 
     def enableEllipseButtons(self):
-        """Делает активными кнопки управления эллипсом (для режима рисования)"""
+        """Делает активными кнопки управления рисованием (для режима рисования)"""
         self.draw_or_move_button.setText("Manipulate")
 
         self.add_cluster_button.setEnabled(True)
         self.reset_drawing_button.setEnabled(True)
         self.spin_box_cluster_number.setEnabled(True)
-        self.decrease_ellipse_height.setEnabled(True)
-        self.increase_ellipse_height.setEnabled(True)
-        self.increase_ellipse_wight.setEnabled(True)
-        self.decrease_ellipse_wight.setEnabled(True)
-        self.turn_ellipse_up.setEnabled(True)
-        self.turn_ellipse_down.setEnabled(True)
-        self.turn_ellipse_right.setEnabled(True)
-        self.turn_ellipse_left.setEnabled(True)
+        # Включает только кнопки взаимодействия с эллипсом
+        self.enableEllipseManipulateButtons()
 
         self.ellipse_radio_button.setEnabled(True)
         self.line_radio_button.setEnabled(True)
@@ -384,6 +412,7 @@ class MainWindow(QMainWindow):
         self.spin_box_dim.setValue(0)
         self.spin_box_cluster_number.setValue(1)
         self.tour = None
+        self.file_name = None
         self.setDefaultClusterTable()
 
         self.disableEllipseButtons()
@@ -418,7 +447,7 @@ class MainWindow(QMainWindow):
         file_base_name = os.path.basename(file_name_labels)
         file_base_name_clean = file_base_name.rsplit('.', 1)[0]
 
-        data_saver = DataSaver(self.tour.getData(), self.tour.getLabels())
+        data_saver = DataSaver(self.tour.getData(), self.tour.getLabels(), self.tour.getLabelsDict())
 
         if file_name_labels:
             success_save_clusters = data_saver.saveLabels(file_name_labels)
@@ -435,9 +464,11 @@ class MainWindow(QMainWindow):
                 QMessageBox.critical(self, "Error", "Failed to save the statistics. Please try again.", QMessageBox.Ok)
                 return False
 
-        QMessageBox.information(self, "Success",
-                                f"{file_base_name_clean}.data and {file_base_name_clean}.stat saved successfully!",
-                                QMessageBox.Ok)
+        self.file_name = file_name_labels
+        box = SilentMessageBox()
+        box.information(self, "Success",
+                        f"{file_base_name_clean}.data and {file_base_name_clean}.stat saved successfully!",
+                        QMessageBox.Ok)
 
         # Смена название окна на текущий сохранённый файл
         self.setWindowTitle(f"Data_analysis - {file_name_labels}")
@@ -460,14 +491,30 @@ class MainWindow(QMainWindow):
             self.disableEllipseButtons()
         self.setMoveMode()
 
-    def insertNewRowToClusterTable(self, cluster_number: int, points_in_cluster: int) -> None:
+    def showCurrentDirectoryInFileManager(self):
+        file_path = self.file_name
+        if not file_path:
+            if os.path.exists(os.path.join(os.getcwd(), "Data")):
+                QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.join(os.getcwd(), "Data")))
+            else:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(os.getcwd()))
+            return
+
+        file_path = os.path.dirname(self.file_name)
+        if os.path.exists(file_path):
+            QDesktopServices.openUrl(QUrl.fromLocalFile(file_path))
+
+    def insertNewRowToClusterTable(self, cluster_number: int, points_in_cluster: int, label_name: str = None) -> None:
         """Добавляет новую строчку с заданными параметрами в таблицу кластеров."""
         row_position = self.cluster_table.rowCount()
 
         self.cluster_table.insertRow(row_position)
 
         self.cluster_table.setItem(row_position, 0, QTableWidgetItem(f"{cluster_number}"))
-        self.cluster_table.setItem(row_position, 1, QTableWidgetItem("Cluster"))
+        if label_name:
+            self.cluster_table.setItem(row_position, 1, QTableWidgetItem(label_name))
+        else:
+            self.cluster_table.setItem(row_position, 1, QTableWidgetItem("Cluster"))
         self.cluster_table.setItem(row_position, 2, QTableWidgetItem(f"{points_in_cluster} points"))
 
     # def
@@ -495,7 +542,8 @@ class MainWindow(QMainWindow):
 
     def addCluster(self):
         """Добавляет кластер в таблицу и в память"""
-        if self.tour and self.opengl_widget.mode == State.DRAW and (self.opengl_widget.ellipse or self.opengl_widget.line):
+        if self.tour and self.opengl_widget.mode == State.DRAW and (
+                self.opengl_widget.ellipse or self.opengl_widget.line):
             points_in_cluster = self.opengl_widget.addCluster(self.spin_box_cluster_number.value())
 
             if points_in_cluster != 0:
@@ -524,6 +572,35 @@ class MainWindow(QMainWindow):
         self.ellipse_radio_button.setChecked(False)
         self.opengl_widget.setSplineTypePolyline()
         self.opengl_widget.ellipse = None
+        self.disableEllipseManipulateButtons()
+
+    def setSplineTypeEllipse(self):
+        """Переключает на режим рисования эллипса"""
+        self.ellipse_radio_button.setChecked(True)
+        self.line_radio_button.setChecked(False)
+        self.opengl_widget.setSplineTypeEllipse()
+        self.opengl_widget.line = None
+        self.enableEllipseManipulateButtons()
+
+    def disableEllipseManipulateButtons(self):
+        self.decrease_ellipse_height.setEnabled(False)
+        self.increase_ellipse_height.setEnabled(False)
+        self.increase_ellipse_wight.setEnabled(False)
+        self.decrease_ellipse_wight.setEnabled(False)
+        self.turn_ellipse_up.setEnabled(False)
+        self.turn_ellipse_down.setEnabled(False)
+        self.turn_ellipse_right.setEnabled(False)
+        self.turn_ellipse_left.setEnabled(False)
+
+    def enableEllipseManipulateButtons(self):
+        self.decrease_ellipse_height.setEnabled(True)
+        self.increase_ellipse_height.setEnabled(True)
+        self.increase_ellipse_wight.setEnabled(True)
+        self.decrease_ellipse_wight.setEnabled(True)
+        self.turn_ellipse_up.setEnabled(True)
+        self.turn_ellipse_down.setEnabled(True)
+        self.turn_ellipse_right.setEnabled(True)
+        self.turn_ellipse_left.setEnabled(True)
 
     def setDrawButtonsInvisible(self, ellipse_controls_only=False):
         self.decrease_ellipse_height.setVisible(False)
@@ -562,13 +639,6 @@ class MainWindow(QMainWindow):
 
         self.ellipse_radio_button.setVisible(True)
         self.line_radio_button.setVisible(True)
-
-    def setSplineTypeEllipse(self):
-        """Переключает на режим рисования эллипса"""
-        self.ellipse_radio_button.setChecked(True)
-        self.line_radio_button.setChecked(False)
-        self.opengl_widget.setSplineTypeEllipse()
-        self.opengl_widget.line = None
 
     def increaseEllipseHeight(self):
         """Увеличивает большую полуось эллипса"""

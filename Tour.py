@@ -9,7 +9,7 @@ except ImportError:
 
 
 class Tour:
-    def __init__(self, dim: int, data: np.ndarray, labels: np.ndarray = None, rotation_speed: float = 0.001) -> None:
+    def __init__(self, dim: int, data: np.ndarray, labels: np.ndarray = None, labels_dict: dict = None, rotation_speed: float = 0.001) -> None:
         self.dim = dim
         self.data = cp.array(data) if gpu_available else np.array(data)
         self.running = True
@@ -18,6 +18,12 @@ class Tour:
         self.target_basis = None
         self.current_basis = None
         self.interpolation_step = 0
+
+        if labels_dict:
+            self.labels_dict = labels_dict
+        else:
+            self.labels_dict = dict()
+            self.labels_dict[0] = "No Cluster"
 
         if labels is not None:
             self.labels = cp.array(labels) if gpu_available else np.array(labels)
@@ -53,6 +59,16 @@ class Tour:
             self.labels[i] = cluster_number
             return True
         return False
+
+    def getClusterLabel(self, cluster_number) -> str:
+        if self.labels_dict.get(cluster_number, 0):
+            return self.labels_dict[cluster_number]
+
+    def getLabelsDict(self):
+        return self.labels_dict
+
+    def addClusterLabel(self, cluster_number: int, label: str):
+        self.labels_dict[cluster_number] = label
 
     def deleteCluster(self, cluster_number):
         for i in range(len(self.labels)):
