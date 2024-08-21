@@ -20,6 +20,8 @@ def matrixToString(matrix: np.ndarray, labels_dict: dict = None) -> str:
                     # Подразумевается, что если словарь есть, значит последнее число в строке это метка класса
                     # Значит сделаем её целочисленной
                     string += str(int(matrix[i][j]))
+                else:
+                    string += str(matrix[i][j])  # Попытка сделать функцию универсальной, чтобы она печатала как обычные матрицы так и специальные
             else:
                 string += str(matrix[i][j])
                 string += '\t\t'
@@ -30,9 +32,16 @@ def matrixToString(matrix: np.ndarray, labels_dict: dict = None) -> str:
 
 
 class DataSaver:
-    def __init__(self, points: np.ndarray, labels: np.ndarray, labels_dict: dict = None) -> None:
+    def __init__(self, points: np.ndarray, labels: np.ndarray, original_dim: int, labels_dict: dict = None) -> None:
         self.points = points
         self.labels = labels
+        self.dim = original_dim
+        if self.dim == 2:
+            # Если оригинальная размерность была 2 значит мы добавили ещё один столбец, он мешает вычислению статистики
+            # следовательно его нужно убрать
+            self.points = points[:, :-1]
+        else:
+            self.points = points
         self.labels_dict = labels_dict
 
     def saveStatistics(self, path_to_stat_file: str) -> bool:

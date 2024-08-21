@@ -1,6 +1,7 @@
 import numpy as np
 from OpenGL.GL import *
 
+
 class Ellipse:
     def __init__(self, start_point, sensitivity=1.0):
         self.start_point = start_point
@@ -80,18 +81,6 @@ class Ellipse:
             self.center_y += y
 
     def isPointInside(self, x, y):
-        # ellipse_angle_rad = -np.radians(self.angle)
-        # cos_angle = np.cos(ellipse_angle_rad)
-        # sin_angle = np.sin(ellipse_angle_rad)
-        #
-        # # Матрица поворота для преобразования точек в систему координат эллипса
-        # cos_angle = np.cos(ellipse_angle_rad)
-        # sin_angle = np.sin(ellipse_angle_rad)
-        # ellipse_rotation_matrix = np.array([
-        #     [cos_angle, -sin_angle],
-        #     [sin_angle, cos_angle]
-        # ])
-
         translated_point = np.array([x - self.center_x, y - self.center_y])
         transformed_point = np.dot(self.ellipse_rotation_matrix, translated_point)
 

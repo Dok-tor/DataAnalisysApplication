@@ -47,7 +47,7 @@ class SplineType(Enum):
 
 
 class VisualizeDataWidget(QOpenGLWidget):
-    def __init__(self):
+    def __init__(self, outer_instance):
         super().__init__()
 
         self.aspect = self.width() / self.height()
@@ -65,6 +65,8 @@ class VisualizeDataWidget(QOpenGLWidget):
         self.line = None
         self.splineType = SplineType.ELLIPSE
         self.is_drawing_moving_now = False
+
+        self.outer_instance = outer_instance
 
     def setMode(self, mode):
         self.mode = mode
@@ -146,7 +148,7 @@ class VisualizeDataWidget(QOpenGLWidget):
 
         glBegin(GL_POINTS)
 
-        normalized_data = self.tour.getNormalizedData()
+        normalized_data = self.tour.getCurrentNormalizedData()
         rotated_points = np.dot(rotation_matrix, normalized_data.T).T
         for i, rotated_point in enumerate(rotated_points):
             # rotated_point = np.dot(rotation_matrix, point)
@@ -367,7 +369,7 @@ class VisualizeDataWidget(QOpenGLWidget):
         if self.line:
             highlighted_points = []
 
-            normalized_data = self.tour.getNormalizedData()
+            normalized_data = self.tour.getCurrentNormalizedData()
             rotation_matrix = self.rotation.as_matrix()
 
             rotated_points = np.dot(rotation_matrix, normalized_data.T).T
@@ -385,7 +387,7 @@ class VisualizeDataWidget(QOpenGLWidget):
 
             rotation_matrix = self.rotation.as_matrix()
 
-            rotated_points = np.dot(rotation_matrix, self.tour.getNormalizedData().T).T
+            rotated_points = np.dot(rotation_matrix, self.tour.getCurrentNormalizedData().T).T
             scaled_points = rotated_points[:, :2] * self.scale
 
             for i, scaled_point in enumerate(scaled_points):

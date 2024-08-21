@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt, QUrl, QEvent
 from PyQt5.QtGui import QIcon, QDesktopServices
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QFileDialog, QPushButton, \
     QHBoxLayout, QTabWidget, QAction, QSpinBox, QBoxLayout, QFrame, QGridLayout, QTableWidget, \
-    QMenu, QTableWidgetItem, QMessageBox, QRadioButton, QStyledItemDelegate
+    QMenu, QTableWidgetItem, QMessageBox, QRadioButton, QStyledItemDelegate, QLineEdit, QSlider
 
 from CustomOpenGLWidget import VisualizeDataWidget, State
 from DataLoader import DataLoader
@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
         self.contentLayout = QHBoxLayout()
 
         # Создаем OpenGL виджет
-        self.opengl_widget = VisualizeDataWidget()
+        self.opengl_widget = VisualizeDataWidget(self)
         self.opengl_widget.setMinimumSize(529, 444)
         self.contentLayout.addWidget(self.opengl_widget)
         self.contentLayout.setContentsMargins(0, 0, 0, 0)  # Уменьшаем отступы
@@ -226,12 +226,39 @@ class MainWindow(QMainWindow):
         self.tab2Layout.addWidget(self.cluster_table)
         self.tab2.setLayout(self.tab2Layout)
 
+        # Третья вкладка
+        self.tab3 = QWidget()
+        self.tab3Layout = QVBoxLayout()
+
+        self.tabs.addTab(self.tab3, "Parameters")
+
+        self.indicateString = QLineEdit()
+
+        self.indicateString.setText("test")
+
+        # Создаем ползунок скорости
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setMinimum(0)
+        self.slider.setMaximum(1000)
+        self.slider.setValue(115)  # Устанавливаем начальное значение ползунка
+        self.slider.setTickPosition(QSlider.TicksBelow)
+        self.slider.setTickInterval(1)
+
+        # Добавляем на layout третьей вкладки
+        self.tab3Layout.addWidget(self.indicateString)
+        self.tab3Layout.addWidget(self.slider)
+
+        # Добавляем layout третьей вкладки на вкладку
+        self.tab3.setLayout(self.tab3Layout)
+
         # Добавляем на общее расположение виджет с вкладками
         self.contentLayout.addWidget(self.tabs)
         self.mainLayout.addLayout(self.contentLayout)
 
         # Устанавливаем основной layout на центральный виджет
         self.centralWidget.setLayout(self.mainLayout)
+
+
 
         ### Обработка событий
 
@@ -281,6 +308,8 @@ class MainWindow(QMainWindow):
         self.cluster_table.customContextMenuRequested.connect(self.showContextMenu)
         self.cluster_table.itemChanged.connect(self.onClusterNameChanged)
 
+        self.slider.valueChanged.connect(self.sliderValueChange)
+
         # Так как начальное состояние move деактивируем кнопки связанные с выделением кластеров
         self.add_cluster_button.setEnabled(False)
         self.reset_drawing_button.setEnabled(False)
@@ -298,6 +327,16 @@ class MainWindow(QMainWindow):
 
         self.tour = None
         self.file_name = None
+        self.dim = None
+
+    def sliderValueChange(self, value):
+        if self.tour:
+            float_value = -0.0026 + (value / 1000) * (0.02 - (-0.0026))
+            self.tour.setRotationSpeed(float_value)
+            # print(float_value)
+
+    def setIndicateString(self, string):
+        self.indicateString.setText(string)
 
     def on_resize(self, event):
         """Устанавливаем новые размеры и шрифты для виджетов в зависимости от размера окна
@@ -333,8 +372,10 @@ class MainWindow(QMainWindow):
 
             data_loader = DataLoader(file_name)
             data_loader.loadData()
+            self.dim = data_loader.getDim()
 
-            self.tour = Tour(data_loader.getDim(), data_loader.getData(), data_loader.getLabels(),
+
+            self.tour = Tour(self, data_loader.getDim(), data_loader.getData(), data_loader.getLabels(),
                              data_loader.getLabelsDict())
             self.opengl_widget.setTour(self.tour)
             self.opengl_widget.setSize(2)  # Магическое число, отвечает за размер отрисовки точек в opengl_widget
@@ -405,11 +446,13 @@ class MainWindow(QMainWindow):
         self.spin_box_cluster_number.setValue(1)
         self.tour = None
         self.file_name = None
+        self.dim = None
         self.setDefaultClusterTable()
 
         self.disableEllipseButtons()
 
         self.opengl_widget.setDefaultState()
+        self.slider.setValue(115)
 
     def setDefaultClusterTable(self):
         """Просто удаляет строчки из таблицы (без взаимодействия с данными кластеров)"""
@@ -439,7 +482,8 @@ class MainWindow(QMainWindow):
         file_base_name = os.path.basename(file_name_labels)
         file_base_name_clean = file_base_name.rsplit('.', 1)[0]
 
-        data_saver = DataSaver(self.tour.getData(), self.tour.getLabels(), self.tour.getLabelsDict())
+        print(self.dim)
+        data_saver = DataSaver(self.tour.getData(), self.tour.getLabels(), self.dim, self.tour.getLabelsDict())
 
         if file_name_labels:
             success_save_clusters = data_saver.saveLabels(file_name_labels)
