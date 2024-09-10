@@ -33,7 +33,7 @@ class MainWindow(QMainWindow):
 
         # Задаём название окна
         self.setWindowTitle("Data_analysis")
-        self.setWindowIcon(QIcon("images/window_icon_512.png"))
+        self.setWindowIcon(QIcon("images/window_icon_2_128.png"))
 
         # Создаем главное меню
         self.mainMenu = self.menuBar()
@@ -65,24 +65,26 @@ class MainWindow(QMainWindow):
         # Создаём верхние кнопки
         self.openButton = QPushButton(' Open')
         self.openButton.setFixedSize(75, 30)
-        self.openButton.setIcon(QIcon('images/open_512.png'))
+        self.openButton.setIcon(QIcon('images/open_file_new.png'))
 
         self.saveButton = QPushButton(' Save')
         self.saveButton.setFixedSize(75, 30)
-        self.saveButton.setIcon(QIcon('images/save_512.png'))
+        self.saveButton.setIcon(QIcon('images/save_new.png'))
 
         self.startButton = QPushButton(' Start')
         self.startButton.setFixedSize(75, 30)
-        self.startButton.setIcon(QIcon('images/play_512.png'))
+        self.startButton.setIcon(QIcon('images/play_new.png'))
 
         self.stopButton = QPushButton(' Stop')
         self.stopButton.setFixedSize(75, 30)
-        self.stopButton.setIcon(QIcon('images/pause_512.png'))
+        self.stopButton.setIcon(QIcon('images/pause_new.png'))
 
         self.spin_box_dim = QSpinBox()
         self.spin_box_dim.setRange(0, 100000)
         self.spin_box_dim.setFixedSize(75, 28)
         self.spin_box_dim.setStyleSheet("QSpinBox { border-radius: 5px; }")
+        self.spin_box_dim.lineEdit().setReadOnly(True)
+        # self.spin_box_dim.setEnabled(False)
 
         # Добавляем созданные кнопки и поле для ввода на горизонтальный layout
         self.topLayout.addWidget(self.openButton)
@@ -103,7 +105,7 @@ class MainWindow(QMainWindow):
         self.contentLayout = QHBoxLayout()
 
         # Создаем OpenGL виджет
-        self.opengl_widget = VisualizeDataWidget(self)
+        self.opengl_widget = VisualizeDataWidget()
         self.opengl_widget.setMinimumSize(529, 444)
         self.contentLayout.addWidget(self.opengl_widget)
         self.contentLayout.setContentsMargins(0, 0, 0, 0)  # Уменьшаем отступы
@@ -122,7 +124,7 @@ class MainWindow(QMainWindow):
         # Первая вкладка
         self.tab1 = QWidget()
         self.tab1Layout = QGridLayout()
-        self.draw_or_move_button = QPushButton("Draw Ellipse")
+        self.draw_or_move_button = QPushButton("Add Cluster")
         self.draw_or_move_button.setFixedHeight(27)
         self.add_cluster_button = QPushButton("Add cluster")
         self.add_cluster_button.setFixedHeight(27)
@@ -155,7 +157,7 @@ class MainWindow(QMainWindow):
 
         # Создаём виджет для задания номера кластера
         self.spin_box_cluster_number = QSpinBox()
-        self.spin_box_cluster_number.setRange(1, 50)
+        self.spin_box_cluster_number.setRange(1, 99)
         self.spin_box_cluster_number.setFixedHeight(27)
         self.spin_box_cluster_number.setStyleSheet("QSpinBox { border-radius: 5px; }")
 
@@ -170,8 +172,9 @@ class MainWindow(QMainWindow):
 
         # Создаём layout для флажков
         self.splineTypeLayout = QVBoxLayout()
-        self.splineTypeLayout.addWidget(self.line_radio_button)
         self.splineTypeLayout.addWidget(self.ellipse_radio_button)
+        self.splineTypeLayout.addWidget(self.line_radio_button)
+
 
         # Создаём виджет как обёртку для этого layout
         self.splineTypeContainer = QWidget()
@@ -232,9 +235,10 @@ class MainWindow(QMainWindow):
 
         self.tabs.addTab(self.tab3, "Parameters")
 
+        # Строка скорости и угла
         self.indicateString = QLineEdit()
-
-        self.indicateString.setText("test")
+        self.indicateString.setText("")
+        self.indicateString.setReadOnly(True)
 
         # Создаем ползунок скорости
         self.slider = QSlider(Qt.Horizontal)
@@ -351,8 +355,7 @@ class MainWindow(QMainWindow):
         # Не забываем вызвать оригинальный обработчик
         QMainWindow.resizeEvent(self, event)
 
-    def openFile(self):
-        """Загружает данные из файла и начинает работу с ними"""
+    def _getFileName(self):
         file_name = QFileDialog().getOpenFileName(parent=self,
                                                   caption="Select a file",
                                                   directory=os.path.join(os.getcwd(), "Data"),
@@ -361,17 +364,38 @@ class MainWindow(QMainWindow):
                                                   options=QFileDialog.Options())
         file_name = file_name[0]
 
+        return file_name
+
+    def openFile(self, file_name: str = None):
+        """Загружает данные из файла и начинает работу с ними"""
         if not file_name:
-            pass
+            file_name = QFileDialog().getOpenFileName(parent=self,
+                                                      caption="Select a file",
+                                                      directory=os.path.join(os.getcwd(), "Data"),
+                                                      filter="All Files (*);;Cluster files (*.data)",
+                                                      initialFilter="Cluster files (*.data)",
+                                                      options=QFileDialog.Options())
+            file_name = file_name[0]
+
+            if not file_name:
+                pass
 
         try:
             if file_name == "":
                 return
 
+                # Проверка расширения файла
+            if not file_name.endswith('.data'):
+                QMessageBox.warning(self, "Wrong file format",
+                                    'Invalid file extension. The extension should be ".data"')
+                return
+
             self.setAllApplicationToDefault()
 
-            data_loader = DataLoader(file_name)
-            data_loader.loadData()
+            data_loader = DataLoader(self, file_name)
+            successfully = data_loader.loadData()
+            if not successfully:
+                return
             self.dim = data_loader.getDim()
 
 
@@ -413,7 +437,7 @@ class MainWindow(QMainWindow):
 
     def disableEllipseButtons(self):
         """Деактивирует кнопки управления рисованием (для режима манипулирования точками)"""
-        self.draw_or_move_button.setText("Draw Ellipse")
+        self.draw_or_move_button.setText("Add Cluster")
 
         self.add_cluster_button.setEnabled(False)
         self.reset_drawing_button.setEnabled(False)
@@ -453,6 +477,7 @@ class MainWindow(QMainWindow):
 
         self.opengl_widget.setDefaultState()
         self.slider.setValue(115)
+        self.indicateString.setText("")
 
     def setDefaultClusterTable(self):
         """Просто удаляет строчки из таблицы (без взаимодействия с данными кластеров)"""
@@ -750,5 +775,10 @@ class MainWindow(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = MainWindow()
+
+    if len(sys.argv) > 1:
+        file_to_open = sys.argv[1]
+        window.openFile(file_to_open)
+
     window.show()
     sys.exit(app.exec_())

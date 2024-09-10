@@ -1,5 +1,11 @@
 import re
 import numpy as np
+from PyQt5.QtWidgets import QMessageBox
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from main import MainWindow
 
 
 def get_re_matches(input_string: str) -> list:
@@ -13,7 +19,7 @@ def get_re_matches(input_string: str) -> list:
 
 
 class DataLoader:
-    def __init__(self, path: str) -> None:
+    def __init__(self, parent: 'MainWindow', path: str) -> None:
         self.count = None
         self.dim = None
         self.path = path
@@ -22,38 +28,47 @@ class DataLoader:
         self.is_labels = False
         self.labels_dict = None
 
-    def loadData(self) -> None:
+        self.parent = parent
+
+    def loadData(self) -> bool:
         data = []
         self.labels = []
+        try:
+            with open(self.path, 'r') as f:
+                line = f.readline().split()
+                if len(line) == 3:
+                    self.count, self.dim, number_of_clusters = map(int, line)
+                    self.labels_dict = dict()
+                else:
+                    self.count, self.dim = map(int, line)
+                    number_of_clusters = None
 
-        with open(self.path, 'r') as f:
-            line = f.readline().split()
-            if len(line) == 3:
-                self.count, self.dim, number_of_clusters = map(int, line)
-                self.labels_dict = dict()
+                for i in range(self.count):
+                    line = f.readline().strip()
+                    data_in_line = get_re_matches(line)
+                    data.append(list(map(float, data_in_line[:self.dim])))
+
+                    if number_of_clusters:
+                        label = int(float(data_in_line[int(self.dim)]))
+                        self.labels.append(label)
+                        if len(data_in_line) == self.dim + 2:
+                            self.labels_dict[label] = data_in_line[-1]
+
+                self.data = np.array(data)
+
+            if self.labels:
+                self.is_labels = True
+                self.labels = np.array(self.labels)
             else:
-                self.count, self.dim = map(int, line)
-                number_of_clusters = None
+                self.labels = None
 
+            return True
 
-            for i in range(self.count):
-                line = f.readline().strip()
-                data_in_line = get_re_matches(line)
-                data.append(list(map(float, data_in_line[:self.dim])))
+        except ValueError:
+            QMessageBox.critical(self.parent, "Wrong file format",
+                                 'Error reading the file.\nThe content may not match the input format.')
+            return False
 
-                if number_of_clusters:
-                    label = int(float(data_in_line[int(self.dim)]))
-                    self.labels.append(label)
-                    if len(data_in_line) == self.dim + 2:
-                        self.labels_dict[label] = data_in_line[-1]
-
-            self.data = np.array(data)
-
-        if self.labels:
-            self.is_labels = True
-            self.labels = np.array(self.labels)
-        else:
-            self.labels = None
 
     def getData(self):
         return self.data

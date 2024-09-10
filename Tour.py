@@ -202,15 +202,19 @@
 
 
 import numpy as np
+from typing import TYPE_CHECKING
 import scipy.linalg
+
+if TYPE_CHECKING:
+    from main import MainWindow
 
 # Предварительно скомпилированная самописная библиотека
 # Если в редакторе отображается с ошибкой, то так и должно быть, он может её не находить
-import my_custom_interpolation as interp
+import my_custom_interpolation as interp  # type: ignore
 
 
 class Tour:
-    def __init__(self, outer_instance: object, dim: int, data: np.ndarray, labels: np.ndarray = None, labels_dict: dict = None, rotation_speed: float = 0.0) -> None:
+    def __init__(self, outer_instance: 'MainWindow', dim: int, data: np.ndarray, labels: np.ndarray = None, labels_dict: dict = None, rotation_speed: float = 0.0) -> None:
         self.outer_instance = outer_instance
         self.dim = dim
         self.data = np.array(data)
@@ -405,6 +409,7 @@ class Tour:
         self.calculateAdaptiveSpeed()
 
         # Обращение к родительскому классу
+
         self.outer_instance.setIndicateString(f'speed: {self.adaptive_speed:.4f}\t angle: {self.angle:.4f}')
 
         self.interpolation_step += self.adaptive_speed

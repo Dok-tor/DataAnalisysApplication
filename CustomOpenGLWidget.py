@@ -47,13 +47,13 @@ class SplineType(Enum):
 
 
 class VisualizeDataWidget(QOpenGLWidget):
-    def __init__(self, outer_instance):
+    def __init__(self):
         super().__init__()
 
         self.aspect = self.width() / self.height()
 
         self.timer = QTimer(self)
-        self.timer.timeout.connect(self.updateScene)
+        self.timer.timeout.connect(self.updateScene)  # type: ignore
         self.timer.start(16)  # обновление каждые 16 мс (~60 FPS)
         self.tour = None
         self.size = 1
@@ -65,8 +65,6 @@ class VisualizeDataWidget(QOpenGLWidget):
         self.line = None
         self.splineType = SplineType.ELLIPSE
         self.is_drawing_moving_now = False
-
-        self.outer_instance = outer_instance
 
     def setMode(self, mode):
         self.mode = mode
@@ -85,7 +83,7 @@ class VisualizeDataWidget(QOpenGLWidget):
         self.aspect = self.width() / self.height()
 
         self.timer = QTimer(self)
-        self.timer.timeout.connect(self.updateScene)
+        self.timer.timeout.connect(self.updateScene)  # type: ignore
         self.timer.start(16)  # обновление каждые 16 мс (~60 FPS)
         self.tour = None
         self.size = 1
@@ -194,7 +192,6 @@ class VisualizeDataWidget(QOpenGLWidget):
         if self.mode == State.MOVE:
             if event.button() == Qt.LeftButton:
                 if self.tour:
-                    # TODO остановка нужно оттестировать взаимодействие с другими частями программы
                     self.tour.stop()
                     self.mode = State.MANIPULATE
 
