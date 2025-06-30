@@ -156,9 +156,9 @@ class MainWindow(QMainWindow):
         self.turn_ellipse_left.setFixedHeight(27)
         
         # Кнопки поворота эллипса
-        self.rotate_ellipce_right = QPushButton("↩️")
+        self.rotate_ellipce_right = QPushButton("Rotate Right")
         self.rotate_ellipce_right.setFixedHeight(27)
-        self.rotate_ellipce_left = QPushButton("↪️")
+        self.rotate_ellipce_left = QPushButton("Rotate Left")
         self.rotate_ellipce_left.setFixedHeight(27)
 
         # Создаём виджет для задания номера кластера
