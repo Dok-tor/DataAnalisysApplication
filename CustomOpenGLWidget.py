@@ -118,7 +118,7 @@ class VisualizeDataWidget(QOpenGLWidget):
             glLoadIdentity()
 
             # отрисовка осей
-            self.drawAxes()
+            # self.drawAxes()
 
             # отрисовка точек
             self.drawPoints()
