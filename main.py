@@ -154,6 +154,12 @@ class MainWindow(QMainWindow):
         self.turn_ellipse_right.setFixedHeight(27)
         self.turn_ellipse_left = QPushButton("Left")
         self.turn_ellipse_left.setFixedHeight(27)
+        
+        # Кнопки поворота эллипса
+        self.rotate_ellipce_right = QPushButton("↩️")
+        self.rotate_ellipce_right.setFixedHeight(27)
+        self.rotate_ellipce_left = QPushButton("↪️")
+        self.rotate_ellipce_left.setFixedHeight(27)
 
         # Создаём виджет для задания номера кластера
         self.spin_box_cluster_number = QSpinBox()
@@ -188,7 +194,11 @@ class MainWindow(QMainWindow):
         self.tab1Layout.addWidget(self.increase_ellipse_wight, 5, 2)
         self.tab1Layout.addWidget(self.decrease_ellipse_wight, 5, 0)
 
+        self.tab1Layout.addWidget(self.rotate_ellipce_left, 7, 0)
+
         self.tab1Layout.addWidget(self.turn_ellipse_up, 7, 1)
+
+        self.tab1Layout.addWidget(self.rotate_ellipce_right, 7, 2)
         self.tab1Layout.addWidget(self.turn_ellipse_down, 8, 1)
         self.tab1Layout.addWidget(self.turn_ellipse_right, 8, 2)
         self.tab1Layout.addWidget(self.turn_ellipse_left, 8, 0)
@@ -308,6 +318,8 @@ class MainWindow(QMainWindow):
         self.turn_ellipse_down.clicked.connect(self.turnEllipseDown)
         self.turn_ellipse_right.clicked.connect(self.turnEllipseRight)
         self.turn_ellipse_left.clicked.connect(self.turnEllipseLeft)
+        self.rotate_ellipce_right.clicked.connect(self.rotateEllipseRight)
+        self.rotate_ellipce_left.clicked.connect(self.rotateEllipseLeft)
 
         self.cluster_table.customContextMenuRequested.connect(self.showContextMenu)
         self.cluster_table.itemChanged.connect(self.onClusterNameChanged)
@@ -322,6 +334,8 @@ class MainWindow(QMainWindow):
         self.increase_ellipse_height.setEnabled(False)
         self.increase_ellipse_wight.setEnabled(False)
         self.decrease_ellipse_wight.setEnabled(False)
+        self.rotate_ellipce_right.setEnabled(False)
+        self.rotate_ellipce_left.setEnabled(False)
         self.turn_ellipse_up.setEnabled(False)
         self.turn_ellipse_down.setEnabled(False)
         self.turn_ellipse_right.setEnabled(False)
@@ -651,6 +665,8 @@ class MainWindow(QMainWindow):
         self.turn_ellipse_down.setEnabled(False)
         self.turn_ellipse_right.setEnabled(False)
         self.turn_ellipse_left.setEnabled(False)
+        self.rotate_ellipce_left.setEnabled(False)
+        self.rotate_ellipce_right.setEnabled(False)
 
     def enableEllipseManipulateButtons(self):
         self.decrease_ellipse_height.setEnabled(True)
@@ -661,6 +677,8 @@ class MainWindow(QMainWindow):
         self.turn_ellipse_down.setEnabled(True)
         self.turn_ellipse_right.setEnabled(True)
         self.turn_ellipse_left.setEnabled(True)
+        self.rotate_ellipce_left.setEnabled(True)
+        self.rotate_ellipce_right.setEnabled(True)
 
     def setDrawButtonsInvisible(self, ellipse_controls_only=False):
         self.decrease_ellipse_height.setVisible(False)
@@ -739,6 +757,14 @@ class MainWindow(QMainWindow):
         """Двигает нарисованный эллипс влево"""
         if self.opengl_widget.ellipse:
             self.opengl_widget.ellipse.turnLeft()
+    
+    def rotateEllipseRight(self):
+        """ Поворачивает нарисованный эллипс вправо """
+        self.opengl_widget.ellipse.rotate(4)
+
+    def rotateEllipseLeft(self):
+        """ Поворачивает нарисованный эллипс влево """
+        self.opengl_widget.ellipse.rotate(-4)
 
     def showContextMenu(self, pos):
         """Контекстное меню для удаления кластеров"""
