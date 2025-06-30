@@ -427,10 +427,15 @@ class Tour:
     def update_projection(self):
         interpolated_basis = self._interpolate_basis()
 
-        if self.dim <= self.border_dim:
+        if self.dim <= 2:
+            self.current_normalized_data = self.normalized_data
+            return
+        elif self.dim <= self.border_dim:
             projected_data = interp.rotate_to_3d(self.normalized_data, interpolated_basis, self.data.shape[1])
         else:
             projected_data = np.dot(self.normalized_data, interpolated_basis)
         self.current_normalized_data = projected_data
+        # if self.dim <= 2:
+        #     self.current_normalized_data = self.normalized_data
 
 

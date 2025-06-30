@@ -142,12 +142,18 @@ class VisualizeDataWidget(QOpenGLWidget):
         glScalef(self.scale, self.scale, self.scale)
 
         # поворот точек
-        rotation_matrix = self.rotation.as_matrix()
+        if self.tour.dim > 2:
+            rotation_matrix = self.rotation.as_matrix()
 
         glBegin(GL_POINTS)
 
+        
         normalized_data = self.tour.getCurrentNormalizedData()
-        rotated_points = np.dot(rotation_matrix, normalized_data.T).T
+
+        if self.tour.dim > 2:
+            rotated_points = np.dot(rotation_matrix, normalized_data.T).T
+        else:
+            rotated_points = normalized_data
         for i, rotated_point in enumerate(rotated_points):
             # rotated_point = np.dot(rotation_matrix, point)
             if self.tour.labels[i] == 0:
