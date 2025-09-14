@@ -84,7 +84,6 @@ class MainWindow(QMainWindow):
         self.spin_box_dim.setFixedSize(75, 28)
         self.spin_box_dim.setStyleSheet("QSpinBox { border-radius: 5px; }")
         self.spin_box_dim.lineEdit().setReadOnly(True)
-        # self.spin_box_dim.setEnabled(False)
 
         # Добавляем созданные кнопки и поле для ввода на горизонтальный layout
         self.topLayout.addWidget(self.openButton)
@@ -277,12 +276,9 @@ class MainWindow(QMainWindow):
 
         self.group.idClicked[int].connect(self.on_mode_changed)
 
-        # self.group.idClicked.connect(self.on_choice)
-
         self.axes_layout = QHBoxLayout()
         self.axes_layout.addWidget(self.cb)
         self.axes_layout.addWidget(self.gr_wid)
-        # self.axes_layout.addWidget(self.b)
 
         self.splineAxesContainer = QWidget()
         self.splineAxesContainer.setLayout(self.axes_layout)
@@ -322,8 +318,6 @@ class MainWindow(QMainWindow):
 
         # Устанавливаем основной layout на центральный виджет
         self.centralWidget.setLayout(self.mainLayout)
-
-
 
         ### Обработка событий
 
@@ -425,7 +419,6 @@ class MainWindow(QMainWindow):
          Не очень нужная функция но я её пока здесь оставлю (возможно работает для мониторов с высоким разрешением
           и dpi для корректного функционирования программы не нужно"""
         new_width = self.width()
-        # new_height = self.height()
 
         self.label.setStyleSheet(f"font-size: {new_width // 30}px;")
         self.button.setStyleSheet(f"font-size: {new_width // 40}px;")
@@ -511,7 +504,6 @@ class MainWindow(QMainWindow):
             row = item.row()
             cluster_number = int(self.cluster_table.item(row, 0).text())
             self.tour.addClusterLabel(cluster_number, item.text())
-            # print(item.text())
 
     def disableEllipseButtons(self):
         """Деактивирует кнопки управления рисованием (для режима манипулирования точками)"""
@@ -563,7 +555,6 @@ class MainWindow(QMainWindow):
         self.cb.setChecked(True)
         self.slider.setValue(115)
         self.a_p.click()
-        # self.sliderValueChange(115)
         self.indicateString.setText("")
 
     def setDefaultClusterTable(self):
@@ -664,9 +655,7 @@ class MainWindow(QMainWindow):
             self.cluster_table.setItem(row_position, 1, QTableWidgetItem("Cluster"))
         self.cluster_table.setItem(row_position, 2, QTableWidgetItem(f"{points_in_cluster} points"))
 
-    # def
     def setMoveMode(self):
-        # if
         self.opengl_widget.mode = State.MOVE
 
     def setManipulateMode(self):
@@ -709,7 +698,6 @@ class MainWindow(QMainWindow):
 
     def resetDrawing(self):
         """Убирает всю нарисованную геометрию"""
-        # if self.opengl_widget.mode == "draw":
         self.opengl_widget.line = None
         self.opengl_widget.ellipse = None
 
@@ -772,7 +760,6 @@ class MainWindow(QMainWindow):
 
         self.ellipse_radio_button.setVisible(False)
         self.line_radio_button.setVisible(False)
-        # self.ellipse_radio_button.setVisible(True)
 
     def setDrawButtonsVisible(self):
         self.decrease_ellipse_height.setVisible(True)
@@ -873,7 +860,6 @@ class MainWindow(QMainWindow):
     def viev_axes(self):
         """Включает и выключает отображение осей"""
 
-        # self.cb.setChecked(True)
         if self.opengl_widget.show_axes == True:
             self.opengl_widget.show_axes = False
         else:

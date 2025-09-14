@@ -85,9 +85,6 @@ class VisualizeDataWidget(QOpenGLWidget):
     def setDefaultState(self):
         self.aspect = self.width() / self.height()
 
-        # self.timer = QTimer(self)
-        # self.timer.timeout.connect(self.updateScene)  # type: ignore
-        # self.timer.start(16)  # обновление каждые 16 мс (~60 FPS)
         if self.timer and not self.timer.isActive():
             self.timer.start(16)
         self.tour = None
@@ -218,7 +215,6 @@ class VisualizeDataWidget(QOpenGLWidget):
                 if self.tour:
                     if self.tour.dim > 2:
                         self.last_mouse_position = event.pos()
-        # if event.button() == Qt.LeftButton and self.mode == State.MANIPULATE:
 
         # Если состояние рисование объектов
         elif self.mode == State.DRAW:
@@ -337,22 +333,6 @@ class VisualizeDataWidget(QOpenGLWidget):
             self.ellipse.rotate(angle_delta)  # изменение угла поворота
         event.accept()
 
-    # def drawAxes(self):
-    #     axis_length = 0.3
-    
-    #     glBegin(GL_LINES)
-    #     glColor3f(1.0, 0.0, 0.0)
-    #     glVertex3f(0, 0, 0)
-    #     glVertex3f(axis_length, 0, 0)
-    
-    #     glColor3f(0.0, 1.0, 0.0)
-    #     glVertex3f(0, 0, 0)
-    #     glVertex3f(0, axis_length, 0)
-    
-    #     glColor3f(0.0, 0.0, 1.0)
-    #     glVertex3f(0, 0, 0)
-    #     glVertex3f(0, 0, axis_length)
-    #     glEnd()
 
     def drawAxes(self):
         if self.show_axes is False:
@@ -369,7 +349,6 @@ class VisualizeDataWidget(QOpenGLWidget):
         Rm = self.rotation.as_matrix() if self.tour.dim > 2 else np.eye(3)
 
         glPushMatrix()
-        # glScalef(self.scale, self.scale, self.scale)
         glBegin(GL_LINES)
 
         for i, v in enumerate(axes3d):
@@ -399,26 +378,6 @@ class VisualizeDataWidget(QOpenGLWidget):
     def setSplineTypePolyline(self):
         self.splineType = SplineType.POLYLINE
 
-    # def drawAxes(self):
-    #     axis_length = 0.1
-    #     rotation_matrix = self.rotation.as_matrix()
-
-    #     axes = [
-    #         (1.0, 0.0, 0.0),
-    #         (0.0, 1.0, 0.0),
-    #         (0.0, 0.0, 1.0),
-    #     ]
-
-    #     glBegin(GL_LINES)
-    #     for i, color in enumerate([(1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)]):
-    #         glColor3f(*color)
-    #         start_point = np.array([0.0, 0.0, 0.0])
-    #         end_point = axis_length * np.array(axes[i])
-    #         rotated_start_point = np.dot(rotation_matrix, start_point)
-    #         rotated_end_point = np.dot(rotation_matrix, end_point)
-    #         glVertex3f(*rotated_start_point)
-    #         glVertex3f(*rotated_end_point)
-    #     glEnd()
 
     def highlightPointsInPolygon(self):
         if self.line:
