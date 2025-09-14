@@ -364,12 +364,12 @@ class VisualizeDataWidget(QOpenGLWidget):
         if axes3d is None or len(axes3d) == 0:
             return
 
-        axis_length = 0.1
+        axis_length = 0.3
         # Поворот пользователем — так же, как для точек
         Rm = self.rotation.as_matrix() if self.tour.dim > 2 else np.eye(3)
 
         glPushMatrix()
-        glScalef(self.scale, self.scale, self.scale)
+        # glScalef(self.scale, self.scale, self.scale)
         glBegin(GL_LINES)
 
         for i, v in enumerate(axes3d):

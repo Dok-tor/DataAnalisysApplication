@@ -269,6 +269,7 @@ class MainWindow(QMainWindow):
         self.group.addButton(self.c_p, 1)
 
         self.group.idClicked[int].connect(self.on_mode_changed)
+
         # self.group.idClicked.connect(self.on_choice)
 
         self.axes_layout = QHBoxLayout()
@@ -537,7 +538,9 @@ class MainWindow(QMainWindow):
         self.disableEllipseButtons()
 
         self.opengl_widget.setDefaultState()
+        self.cb.setChecked(True)
         self.slider.setValue(115)
+        self.a_p.click()
         # self.sliderValueChange(115)
         self.indicateString.setText("")
 
