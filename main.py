@@ -293,7 +293,7 @@ class MainWindow(QMainWindow):
         self.slider.setMaximum(1000)
         self.slider.setValue(115)  # Устанавливаем начальное значение ползунка
         self.slider.setTickPosition(QSlider.TicksBelow)
-        self.slider.setTickInterval(1)
+        self.slider.setTickInterval(10)
 
         # Добавляем на layout третьей вкладки
         self.tab3Layout.addWidget(self.splineAxesContainer)
@@ -392,9 +392,13 @@ class MainWindow(QMainWindow):
 
     def sliderValueChange(self, value):
         if self.tour:
-            float_value = -0.0026 + (value / 1000) * (0.02 - (-0.0026))
+            float_value = self._calculate_rotation_speed(value)
             self.tour.setRotationSpeed(float_value)
             # print(float_value)
+    
+    def _calculate_rotation_speed(self, slider_value=115):
+        float_value = -0.0026 + (slider_value / 1000) * (0.02 - (-0.0026))
+        return float_value
 
     def setIndicateString(self, string):
         self.indicateString.setText(string)
@@ -455,9 +459,9 @@ class MainWindow(QMainWindow):
                 return
             self.dim = data_loader.getDim()
 
-
+            rotation_speed = self._calculate_rotation_speed(115)
             self.tour = Tour(self, data_loader.getDim(), data_loader.getData(), data_loader.getLabels(),
-                             data_loader.getLabelsDict())
+                             data_loader.getLabelsDict(), rotation_speed=rotation_speed)
             self.opengl_widget.setTour(self.tour)
             self.opengl_widget.setSize(2)  # Магическое число, отвечает за размер отрисовки точек в opengl_widget
 
@@ -534,6 +538,7 @@ class MainWindow(QMainWindow):
 
         self.opengl_widget.setDefaultState()
         self.slider.setValue(115)
+        # self.sliderValueChange(115)
         self.indicateString.setText("")
 
     def setDefaultClusterTable(self):

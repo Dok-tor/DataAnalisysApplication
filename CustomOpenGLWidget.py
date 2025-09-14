@@ -85,9 +85,11 @@ class VisualizeDataWidget(QOpenGLWidget):
     def setDefaultState(self):
         self.aspect = self.width() / self.height()
 
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.updateScene)  # type: ignore
-        self.timer.start(16)  # обновление каждые 16 мс (~60 FPS)
+        # self.timer = QTimer(self)
+        # self.timer.timeout.connect(self.updateScene)  # type: ignore
+        # self.timer.start(16)  # обновление каждые 16 мс (~60 FPS)
+        if self.timer and not self.timer.isActive():
+            self.timer.start(16)
         self.tour = None
         self.size = 1
         self.scale = 0.7
