@@ -135,6 +135,10 @@ class MainWindow(QMainWindow):
         self.ellipse_radio_button = QRadioButton("Ellipse")
         self.line_radio_button = QRadioButton("Line")
 
+        # Кнопки управления размером
+        self.zoom_out_button = QPushButton("Zoom +")
+        self.zoom_in_button = QPushButton("Zoom -")
+
         # Кнопки управления размерами эллипса
         self.increase_ellipse_height = QPushButton("+ Height")
         self.increase_ellipse_height.setFixedHeight(27)
@@ -188,6 +192,9 @@ class MainWindow(QMainWindow):
 
         # Помещаем виджет с флажками на общую сетку
         self.tab1Layout.addWidget(self.splineTypeContainer, 2, 1)
+
+        self.tab1Layout.addWidget(self.zoom_in_button, 10, 0)
+        self.tab1Layout.addWidget(self.zoom_out_button, 10, 2)
 
         self.tab1Layout.addWidget(self.increase_ellipse_height, 4, 1)
         self.tab1Layout.addWidget(self.decrease_ellipse_height, 5, 1)
@@ -343,6 +350,9 @@ class MainWindow(QMainWindow):
         # Рисование перемещение
         self.draw_or_move_button.clicked.connect(self.changeMode)
 
+        self.zoom_in_button.clicked.connect(self.zoom_in)
+        self.zoom_out_button.clicked.connect(self.zoom_out)
+
         # Добавление кластера
         self.add_cluster_button.clicked.connect(self.addCluster)
 
@@ -390,6 +400,12 @@ class MainWindow(QMainWindow):
         self.tour = None
         self.file_name = None
         self.dim = None
+    
+    def zoom_in(self):
+        self.opengl_widget.zoomIn()
+    
+    def zoom_out(self):
+        self.opengl_widget.zoomOut()
 
     def sliderValueChange(self, value):
         if self.tour:
@@ -511,6 +527,9 @@ class MainWindow(QMainWindow):
         self.line_radio_button.setEnabled(False)
         self.ellipse_radio_button.setChecked(False)
 
+        self.zoom_in_button.setEnabled(True)
+        self.zoom_out_button.setEnabled(True)
+
     def enableEllipseButtons(self):
         """Делает активными кнопки управления рисованием (для режима рисования)"""
         self.draw_or_move_button.setText("Manipulate")
@@ -524,6 +543,9 @@ class MainWindow(QMainWindow):
         self.ellipse_radio_button.setEnabled(True)
         self.line_radio_button.setEnabled(True)
         self.ellipse_radio_button.setChecked(True)
+
+        self.zoom_in_button.setEnabled(False)
+        self.zoom_out_button.setEnabled(False)
 
     def setAllApplicationToDefault(self):
         """Сбрасывает настройки программы к базовым, нужно перед открытием новых файлов"""
