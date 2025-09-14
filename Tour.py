@@ -227,6 +227,8 @@ class Tour:
         self.angle = 0
         self.adaptive_speed = 0.0018
 
+        self._last_interpolated_basis = None  # <— добавим
+
         self.border_dim = 50  # Экспериментально найденное значение
 
         if labels_dict:
@@ -426,6 +428,7 @@ class Tour:
 
     def update_projection(self):
         interpolated_basis = self._interpolate_basis()
+        self._last_interpolated_basis = interpolated_basis  # <— запомним
 
         if self.dim <= 2:
             self.current_normalized_data = self.normalized_data
@@ -439,3 +442,43 @@ class Tour:
         #     self.current_normalized_data = self.normalized_data
 
 
+    def getProjectedAxes3D(self) -> np.ndarray:
+        """
+        Возвращает массив shape: (self.dim, 3), где каждая строка — это образ e_i
+        (единичной оси исходного d-мерного пространства) в текущем 3D-представлении Grand Tour.
+        Важно: возвращаем ровно self.dim осей (без добавленного искусственного Z при dim==2).
+        """
+        d = self.dim
+        Dcols = self.data.shape[1]  # число столбцов данных (учитывает добавленный Z при dim==2)
+        if d <= 0:
+            return np.zeros((0, 3), dtype=float)
+
+        # Базис e_i исходного пространства: берём I_d и при необходимости дорисовываем нулевой Z-столбец,
+        # чтобы соответствовать числу столбцов self.data (которое может быть 3 при dim==2).
+        # Формируем "данные" из d строк-образцов: X_axes shape (d, Dcols)
+        X_axes = np.zeros((d, Dcols), dtype=float)
+        X_axes[:, :d] = np.eye(d, dtype=float)  # первые d столбцов — единичные e_i
+
+        B = self._last_interpolated_basis
+        if d <= 2:
+            # При dim<=2 данные уже рисуются как есть (с добавленным Z=0), так что образ e_i — это e_i в XY-плоскости
+            # (третья компонента — 0). Возвращаем первые d осей как 3D-векторы (X,Y,0).
+            axes3d = np.zeros((d, 3), dtype=float)
+            axes3d[:, :d] = np.eye(d, dtype=float)
+            return axes3d
+
+        if B is None:
+            # на всякий случай — если ещё не успели посчитать проекцию
+            # вернём нули, чтобы вызывающая сторона могла просто ничего не рисовать
+            return np.zeros((d, 3), dtype=float)
+
+        if d <= self.border_dim:
+            # Используем тот же путь, что и для данных
+            # (через вашу быструю rotate_to_3d), прогоняем все e_i за один вызов
+            axes3d_full = interp.rotate_to_3d(X_axes, B, Dcols)  # shape: (d, 3)
+            return axes3d_full
+        else:
+            # Высокая размерность: данные проецируются как X @ B, где B shape (Dcols, 3)
+            # Для e_i: I_d @ B => берём первые d строк B (т.к. X_axes имеет единицы в первых d столбцах)
+            # Если Dcols==d, это просто B.
+            return (X_axes @ B)  # shape: (d, 3)

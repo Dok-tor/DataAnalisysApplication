@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt, QUrl, QEvent
 from PyQt5.QtGui import QIcon, QDesktopServices
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QFileDialog, QPushButton, \
     QHBoxLayout, QTabWidget, QAction, QSpinBox, QBoxLayout, QFrame, QGridLayout, QTableWidget, \
-    QMenu, QTableWidgetItem, QMessageBox, QRadioButton, QStyledItemDelegate, QLineEdit, QSlider
+    QMenu, QTableWidgetItem, QMessageBox, QRadioButton, QStyledItemDelegate, QLineEdit, QSlider, QCheckBox, QButtonGroup, QLabel
 
 from CustomOpenGLWidget import VisualizeDataWidget, State
 from DataLoader import DataLoader
@@ -245,6 +245,43 @@ class MainWindow(QMainWindow):
 
         self.tabs.addTab(self.tab3, "Parameters")
 
+        # Чекбокс включения осей
+        self.cb = QCheckBox("View Axes")
+        self.cb.setChecked(True)
+        self.cb.stateChanged.connect(self.viev_axes)
+
+        # Кнопки
+        self.c_p = QRadioButton("Center Position")
+        self.a_p = QRadioButton("Angle Position")
+        self.a_p.setChecked(True)
+
+        self.radio_layout = QVBoxLayout()
+        self.radio_layout.addWidget(self.a_p)
+        self.radio_layout.addWidget(self.c_p)
+
+        self.gr_wid = QWidget()
+        self.gr_wid.setLayout(self.radio_layout)
+
+        # Группа делает выбор взаимоисключающим
+        self.group = QButtonGroup(self)
+        self.group.setExclusive(True)
+        self.group.addButton(self.a_p, 0)
+        self.group.addButton(self.c_p, 1)
+
+        self.group.idClicked[int].connect(self.on_mode_changed)
+        # self.group.idClicked.connect(self.on_choice)
+
+        self.axes_layout = QHBoxLayout()
+        self.axes_layout.addWidget(self.cb)
+        self.axes_layout.addWidget(self.gr_wid)
+        # self.axes_layout.addWidget(self.b)
+
+        self.splineAxesContainer = QWidget()
+        self.splineAxesContainer.setLayout(self.axes_layout)
+
+        self.speed_label = QLabel("Speed Control")
+        self.speed_label.setAlignment(Qt.AlignHCenter)
+
         # Строка скорости и угла
         self.indicateString = QLineEdit()
         self.indicateString.setText("")
@@ -259,8 +296,14 @@ class MainWindow(QMainWindow):
         self.slider.setTickInterval(1)
 
         # Добавляем на layout третьей вкладки
-        self.tab3Layout.addWidget(self.indicateString)
+        self.tab3Layout.addWidget(self.splineAxesContainer)
+        self.tab3Layout.addWidget(self.speed_label)
+
         self.tab3Layout.addWidget(self.slider)
+        self.tab3Layout.addWidget(self.indicateString)
+
+        # пустой «пружинящий» элемент снизу, а верхний блок не будет растягиваться
+        self.tab3Layout.addStretch(1)
 
         # Добавляем layout третьей вкладки на вкладку
         self.tab3.setLayout(self.tab3Layout)
@@ -796,6 +839,22 @@ class MainWindow(QMainWindow):
             cluster_number = int(self.cluster_table.item(row, 0).text())
             self.tour.deleteCluster(cluster_number)
             self.cluster_table.removeRow(row)
+    
+    def viev_axes(self):
+        """Включает и выключает отображение осей"""
+
+        # self.cb.setChecked(True)
+        if self.opengl_widget.show_axes == True:
+            self.opengl_widget.show_axes = False
+        else:
+            self.opengl_widget.show_axes = True
+    
+    def on_mode_changed(self, id_: int):
+        """ Меняет положение отображения осей"""
+        if id_ == 0:
+            self.opengl_widget.where_axes = 1  # Угловая позиция
+        elif id_ == 1:
+            self.opengl_widget.where_axes = 2  # Центральная позиция
 
 
 if __name__ == '__main__':

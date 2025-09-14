@@ -66,6 +66,9 @@ class VisualizeDataWidget(QOpenGLWidget):
         self.splineType = SplineType.ELLIPSE
         self.is_drawing_moving_now = False
 
+        self.show_axes = True
+        self.where_axes = 1  # 1 - угол, 2 - центр
+
     def setMode(self, mode):
         self.mode = mode
 
@@ -117,11 +120,15 @@ class VisualizeDataWidget(QOpenGLWidget):
             glMatrixMode(GL_MODELVIEW)
             glLoadIdentity()
 
-            # отрисовка осей
-            # self.drawAxes()
-
             # отрисовка точек
             self.drawPoints()
+
+            # Мини-оси (оверлей) в левом нижнем углу
+            if self.show_axes:
+                if self.where_axes == 1:
+                    self.drawAxesInsetBottomLeft()
+                elif self.where_axes == 2:
+                    self.drawAxes()
 
         # отрисовка эллипса (только в draw)
         if self.ellipse:
@@ -154,6 +161,7 @@ class VisualizeDataWidget(QOpenGLWidget):
             rotated_points = np.dot(rotation_matrix, normalized_data.T).T
         else:
             rotated_points = normalized_data
+
         for i, rotated_point in enumerate(rotated_points):
             # rotated_point = np.dot(rotation_matrix, point)
             if self.tour.labels[i] == 0:
@@ -163,6 +171,7 @@ class VisualizeDataWidget(QOpenGLWidget):
             glVertex3f(*rotated_point)
         glEnd()
         glPopMatrix()
+
 
     def resetView(self):
         self.rotation = R.from_quat([0, 0, 0, 1])  # Сброс вращения на единичный кватернион
@@ -204,7 +213,9 @@ class VisualizeDataWidget(QOpenGLWidget):
         # Если состояние манипулирования (вращения)
         if self.mode == State.MANIPULATE:
             if event.button() == Qt.LeftButton:
-                self.last_mouse_position = event.pos()
+                if self.tour:
+                    if self.tour.dim > 2:
+                        self.last_mouse_position = event.pos()
         # if event.button() == Qt.LeftButton and self.mode == State.MANIPULATE:
 
         # Если состояние рисование объектов
@@ -326,20 +337,59 @@ class VisualizeDataWidget(QOpenGLWidget):
 
     # def drawAxes(self):
     #     axis_length = 0.3
-    #
+    
     #     glBegin(GL_LINES)
     #     glColor3f(1.0, 0.0, 0.0)
     #     glVertex3f(0, 0, 0)
     #     glVertex3f(axis_length, 0, 0)
-    #
+    
     #     glColor3f(0.0, 1.0, 0.0)
     #     glVertex3f(0, 0, 0)
     #     glVertex3f(0, axis_length, 0)
-    #
+    
     #     glColor3f(0.0, 0.0, 1.0)
     #     glVertex3f(0, 0, 0)
     #     glVertex3f(0, 0, axis_length)
     #     glEnd()
+
+    def drawAxes(self):
+        if self.show_axes is False:
+            return
+        if not self.tour:
+            return
+
+        axes3d = self.tour.getProjectedAxes3D()  # shape: (d, 3)
+        if axes3d is None or len(axes3d) == 0:
+            return
+
+        axis_length = 0.1
+        # Поворот пользователем — так же, как для точек
+        Rm = self.rotation.as_matrix() if self.tour.dim > 2 else np.eye(3)
+
+        glPushMatrix()
+        glScalef(self.scale, self.scale, self.scale)
+        glBegin(GL_LINES)
+
+        for i, v in enumerate(axes3d):
+            n = np.linalg.norm(v)
+            if n <= 1e-12:
+                continue
+            v = (v / n) * axis_length
+            v = Rm @ v
+
+            # Цвета: XYZ -> RGB, остальные — из вашей палитры
+            if   i == 0: color = (1.0, 0.0, 0.0)
+            elif i == 1: color = (0.0, 1.0, 0.0)
+            elif i == 2: color = (0.0, 0.0, 1.0)
+            else:
+                _, color = cluster_colors[i % len(cluster_colors)]
+
+            glColor3f(*color)
+            glVertex3f(0.0, 0.0, 0.0)
+            glVertex3f(v[0], v[1], v[2])
+
+        glEnd()
+        glPopMatrix()
 
     def setSplineTypeEllipse(self):
         self.splineType = SplineType.ELLIPSE
@@ -347,26 +397,26 @@ class VisualizeDataWidget(QOpenGLWidget):
     def setSplineTypePolyline(self):
         self.splineType = SplineType.POLYLINE
 
-    def drawAxes(self):
-        axis_length = 0.1
-        rotation_matrix = self.rotation.as_matrix()
+    # def drawAxes(self):
+    #     axis_length = 0.1
+    #     rotation_matrix = self.rotation.as_matrix()
 
-        axes = [
-            (1.0, 0.0, 0.0),
-            (0.0, 1.0, 0.0),
-            (0.0, 0.0, 1.0),
-        ]
+    #     axes = [
+    #         (1.0, 0.0, 0.0),
+    #         (0.0, 1.0, 0.0),
+    #         (0.0, 0.0, 1.0),
+    #     ]
 
-        glBegin(GL_LINES)
-        for i, color in enumerate([(1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)]):
-            glColor3f(*color)
-            start_point = np.array([0.0, 0.0, 0.0])
-            end_point = axis_length * np.array(axes[i])
-            rotated_start_point = np.dot(rotation_matrix, start_point)
-            rotated_end_point = np.dot(rotation_matrix, end_point)
-            glVertex3f(*rotated_start_point)
-            glVertex3f(*rotated_end_point)
-        glEnd()
+    #     glBegin(GL_LINES)
+    #     for i, color in enumerate([(1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)]):
+    #         glColor3f(*color)
+    #         start_point = np.array([0.0, 0.0, 0.0])
+    #         end_point = axis_length * np.array(axes[i])
+    #         rotated_start_point = np.dot(rotation_matrix, start_point)
+    #         rotated_end_point = np.dot(rotation_matrix, end_point)
+    #         glVertex3f(*rotated_start_point)
+    #         glVertex3f(*rotated_end_point)
+    #     glEnd()
 
     def highlightPointsInPolygon(self):
         if self.line:
@@ -416,3 +466,62 @@ class VisualizeDataWidget(QOpenGLWidget):
                 count_points_in_cluster += 1
         self.update()
         return count_points_in_cluster
+
+    def drawAxesInsetBottomLeft(self):
+        if not self.tour:
+            return
+
+        axes3d = self.tour.getProjectedAxes3D()  # shape: (d, 3) — образы e_i
+        if axes3d is None or len(axes3d) == 0:
+            return
+
+        # Параметры мини-вьюпорта (в пикселях)
+        w, h = self.width(), self.height()
+        inset_size = int(min(w, h) * 0.22)   # размер квадрата с осями
+        margin = int(min(w, h) * 0.02)       # отступ от краёв
+
+        # Сохраняем текущий viewport и матрицы
+        vp = glGetIntegerv(GL_VIEWPORT)
+
+        glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity()
+        # Простой ортографический бокс для мини-вьюпорта
+        glOrtho(-1, 1, -1, 1, -1, 1)
+
+        glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity()
+
+        # Переключаемся на мини-вьюпорт в левом нижнем углу
+        glViewport(margin, margin, inset_size, inset_size)
+
+        # Отключаем глубину, чтобы гизмо было поверх
+        glDisable(GL_DEPTH_TEST)
+
+        # Поворот как у точек (для d<=2 поворот не нужен)
+        Rm = self.rotation.as_matrix() if self.tour.dim > 2 else np.eye(3)
+
+        axis_length = 0.85  # длина осей внутри [-1,1]^2
+        glBegin(GL_LINES)
+        for i, v in enumerate(axes3d):
+            n = np.linalg.norm(v)
+            if n <= 1e-12:
+                continue
+            v = (v / n) * axis_length
+            v = Rm @ v  # поворачиваем тем же кватернионом
+
+            # Цвета: XYZ -> RGB, остальные — из вашей палитры
+            if   i == 0: color = (1.0, 0.0, 0.0)
+            elif i == 1: color = (0.0, 1.0, 0.0)
+            elif i == 2: color = (0.0, 0.0, 1.0)
+            else:
+                _, color = cluster_colors[i % len(cluster_colors)]
+
+            glColor3f(*color)
+            # Рисуем от (0,0,0) к v (в 3D; проецируется в наш ортографический мини-бокс)
+            glVertex3f(0.0, 0.0, 0.0)
+            glVertex3f(float(v[0]), float(v[1]), float(v[2]))
+        glEnd()
+
+        # Восстанавливаем состояние
+        glEnable(GL_DEPTH_TEST)
+        glViewport(int(vp[0]), int(vp[1]), int(vp[2]), int(vp[3]))
+        glMatrixMode(GL_MODELVIEW); glPopMatrix()
+        glMatrixMode(GL_PROJECTION); glPopMatrix()
